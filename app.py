@@ -86,6 +86,19 @@ def leer_solicitudes():
     return lista
 
 # ======================
+# ✏️ GUARDAR SOLICITUDES
+# ======================
+def guardar_solicitudes(lista):
+    ruta = os.path.join(CARPETA_DOCUMENTOS, "solicitudes.txt")
+    with open(ruta, "w", encoding="utf-8") as f:
+        for sol in lista:
+            f.write("============================================\n")
+            for clave, valor in sol.items():
+                if clave != "indice":
+                    f.write(f"{clave}: {valor}\n")
+            f.write("\n")
+
+# ======================
 # 🔧 PARSEAR DOCUMENTOS
 # ======================
 def parsear_documentos(texto):
@@ -352,6 +365,7 @@ FORMULARIO_HTML = """
         .listo { background:#d4edda; color:#155724; }
         .boton-enviar { width:100%; padding:14px; background:#239B56; color:white; border:none; border-radius:10px; font-size:18px; font-weight:bold; margin-top:15px; cursor:pointer; }
         .boton-volver { display:inline-block; padding:10px 20px; background:#95a5a6; color:white; text-decoration:none; border-radius:8px; margin-bottom:15px; }
+        .boton-seguimiento { display:inline-block; padding:10px 20px; background:#D68910; color:white; text-decoration:none; border-radius:8px; margin-left:10px; margin-bottom:15px; }
         .mensaje { margin-top:15px; padding:15px; border-radius:8px; display:none; }
         .exito { background:#d4edda; color:#155724; display:block !important; }
         .aviso-doc { font-size:14px; color:#555; margin-bottom:8px; background:#fff3cd; padding:8px; border-radius:5px; }
@@ -360,6 +374,7 @@ FORMULARIO_HTML = """
 <body>
     <div class="caja">
         <a href="/" class="boton-volver">← Volver al Inicio</a>
+        <a href="javascript:abrirSeguimiento()" class="boton-seguimiento">🔍 Seguimiento</a>
         <h1>✍️ Solicitud de Inscripción</h1>
         <div class="seccion">
             <h2>👤 Datos del Estudiante</h2>
@@ -383,6 +398,19 @@ FORMULARIO_HTML = """
         <button class="boton-enviar" onclick="enviarFormulario()">📤 Enviar Solicitud de Inscripción</button>
         <div id="msg" class="mensaje"></div>
     </div>
+
+    <!-- MODAL SEGUIMIENTO -->
+    <div id="modalSeguimiento" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:100;">
+        <div style="background:white; padding:30px; border-radius:14px; width:90%; max-width:450px;">
+            <h2>🔍 Seguimiento de Solicitud</h2>
+            <p style="margin-bottom:10px;">Escribe el Número de Registro:</p>
+            <input type="text" id="numeroRegistro" placeholder="Ej: 20260827143022" style="width:100%; padding:10px; font-size:16px; border:2px solid #ccc; border-radius:8px; margin-bottom:15px;">
+            <button onclick="consultarEstado()" style="padding:10px 20px; background:#283747; color:white; border:none; border-radius:8px; cursor:pointer;">Consultar</button>
+            <button onclick="cerrarSeguimiento()" style="padding:10px 20px; background:#ccc; color:#333; border:none; border-radius:8px; cursor:pointer; margin-left:5px;">Cerrar</button>
+            <div id="resultadoSeg" style="margin-top:15px; padding:15px; border-radius:8px; display:none;"></div>
+        </div>
+    </div>
+
     <script>
         const docs = [
             "📕 Libreta de Calificaciones",
@@ -441,13 +469,25 @@ FORMULARIO_HTML = """
                 }
             }catch{ alert('Error al enviar. Inténtalo de nuevo.'); }
         }
+        function abrirSeguimiento(){ document.getElementById('modalSeguimiento').style.display='flex'; document.getElementById('resultadoSeg').style.display='none'; document.getElementById('numeroRegistro').value=''; }
+        function cerrarSeguimiento(){ document.getElementById('modalSeguimiento').style.display='none'; }
+        async function consultarEstado(){
+            fetch('/consultar_registro?numero='+encodeURIComponent(document.getElementById('numeroRegistro').value.trim()))
+            .then(r=>r.json()).then(d=>{
+                const res=document.getElementById('resultadoSeg'); res.style.display='none';
+                if(!d.encontrado){ res.style.display='block'; res.style.background='#f8d7da'; res.style.color='#721c24'; res.innerHTML='❌ No encontrado. Verifica el número.'; }
+                else if(d.estado.includes('APROBADA')){ res.style.display='block'; res.style.background='#d4edda'; res.style.color='#155724'; res.innerHTML='✅ ¡SOLICITUD APROBADA!'; }
+                else if(d.estado.includes('OBSERVADA')){ res.style.display='block'; res.style.background='#fff3cd'; res.style.color='#856404'; res.innerHTML='⚠️ OBSERVADA. Revisa documentos.'; }
+                else { res.style.display='block'; res.style.background='#fff3cd'; res.style.color='#856404'; res.innerHTML='⏳ PENDIENTE. En revisión.'; }
+            });
+        }
     </script>
 </body>
 </html>
 """
 
 # ======================
-# 🔐 PANEL DE SECRETARÍA — CON BOTÓN DE DESCARGA PDF
+# 🔐 PANEL DE SECRETARÍA — COMPLETO
 # ======================
 SECRETARIA_HTML = """
 <!DOCTYPE html>
@@ -473,6 +513,8 @@ SECRETARIA_HTML = """
         .btn-aprobar { background:#239B56; color:white; }
         .btn-observar { background:#f39c12; color:white; }
         .btn-pdf { background:#9B59B6; color:white; }
+        .btn-eliminar { background:#e74c3c; color:white; }
+        .btn-descargar { background:#16a085; color:white; }
         .boton-volver { display:inline-block; padding:10px 20px; background:#95a5a6; color:white; text-decoration:none; border-radius:8px; margin-bottom:15px; }
         .aviso { background:#eafaf1; color:#1e8449; padding:12px; border-radius:8px; margin-bottom:15px; }
         .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); align-items:flex-start; justify-content:center; z-index:200; padding:20px; overflow-y:auto; }
@@ -501,13 +543,14 @@ SECRETARIA_HTML = """
     <div class="caja">
         <a href="/" class="boton-volver">← Volver al Inicio</a>
         <h1>📂 SOLICITUDES RECIBIDAS</h1>
-        <div class="aviso">🔄 Pulsa 👁️ Ver para consultar datos y fotos. 📄 Descargar genera un PDF con TODA la solicitud incluyendo las fotos.</div>
+        <div class="aviso">🔄 Ver formulario completo + fotos • 📄 Descargar PDF • 📷 Descargar fotos • ✅ Aprobar • ⚠️ Observar • ❌ Eliminar</div>
         <table>
             <thead><tr><th>Fecha</th><th>Estudiante</th><th>Tutor / CI</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="tabla"></tbody>
         </table>
     </div>
 
+    <!-- MODAL VER DETALLE -->
     <div id="modalVer" class="modal">
         <div class="modal-contenido">
             <span class="cerrar-modal" onclick="cerrarModalVer()">&times;</span>
@@ -517,11 +560,13 @@ SECRETARIA_HTML = """
                 <button class="btn btn-pdf" id="btnDescargarPDF">📄 Descargar Formulario Completo (PDF)</button>
                 <button class="btn btn-aprobar" id="btnAprobarModal">✅ Aprobar Solicitud</button>
                 <button class="btn btn-observar" id="btnObservarModal">⚠️ Marcar como Observada</button>
+                <button class="btn btn-eliminar" id="btnEliminarModal">❌ Eliminar Solicitud</button>
                 <button class="btn" style="background:#ccc; color:#333;" onclick="cerrarModalVer()">Cerrar</button>
             </div>
         </div>
     </div>
 
+    <!-- VISOR IMAGEN AMPLIADA -->
     <div id="visorGrande" class="imagen-grande" onclick="cerrarImagenGrande()">
         <span class="cerrar-grande">&times;</span>
         <img id="fotoAmpliada" src="">
@@ -551,7 +596,7 @@ SECRETARIA_HTML = """
                 if(sol.ESTADO&&sol.ESTADO.includes('APROBADA')) clase='estado-aprobada';
                 else if(sol.ESTADO&&sol.ESTADO.includes('OBSERVADA')) clase='estado-observada';
                 const est=sol.ESTUDIANTE||'---', tut=sol.TUTOR||'---', ci=sol['CI TUTOR']||'---', estdo=sol.ESTADO||'PENDIENTE ⏳';
-                tb.innerHTML += `<tr class="fila"><td>${sol.FECHA||'---'}</td><td>${est}</td><td>${tut}<br><small>CI: ${ci}</small></td><td class="${clase}">${estdo}</td><td><button class="btn btn-ver" onclick="verDetalle(${i})">👁️ Ver</button> <button class="btn btn-pdf" onclick="descargarPDF(${i})">📄 PDF</button> <button class="btn btn-aprobar" onclick="cambiarEstado(${i},'APROBADA ✅')">Aprobar</button> <button class="btn btn-observar" onclick="cambiarEstado(${i},'OBSERVADA ⚠️')">Observar</button></td></tr>`;
+                tb.innerHTML += `<tr class="fila"><td>${sol.FECHA||'---'}</td><td>${est}</td><td>${tut}<br><small>CI: ${ci}</small></td><td class="${clase}">${estdo}</td><td><button class="btn btn-ver" onclick="verDetalle(${i})">👁️ Ver</button> <button class="btn btn-pdf" onclick="descargarPDF(${i})">📄 PDF</button> <button class="btn btn-aprobar" onclick="cambiarEstado(${i},'APROBADA ✅')">Aprobar</button> <button class="btn btn-observar" onclick="cambiarEstado(${i},'OBSERVADA ⚠️')">Observar</button> <button class="btn btn-eliminar" onclick="eliminarSolicitud(${i})">❌</button></td></tr>`;
             });
         }
 
@@ -573,47 +618,10 @@ SECRETARIA_HTML = """
                     <p><strong>🪪 CI Tutor:</strong> ${s['CI TUTOR']||'---'}</p>
                     <p><strong>📞 Teléfono:</strong> ${s.TELÉFONO||'---'}</p>
                     <p><strong>📧 Correo:</strong> ${s.CORREO||'---'}</p>
-                    <p style="font-size:16px; font-weight:bold; margin-top:10px; color:#d68910;">📌 Estado actual: ${s.ESTADO||'PENDIENTE ⏳'}</p>
-                </div>
-                <h3 class="titulo-fotos">📷 DOCUMENTOS — Haz clic para ampliar</h3>
-                <div class="galeria">
-            `;
-            const archivos=s.documentos_parseados||{};
-            if(Object.keys(archivos).length===0) html += `<div class="sin-foto">⚠️ No se encontraron documentos</div>`;
-            else for(const clave in archivos){
-                const ruta=archivos[clave], nom=nombresDocs[clave]||`Documento ${clave}`;
-                html += `<div class="tarjeta-foto"><h5>${nom}</h5><img src="/ver_foto?archivo=${encodeURIComponent(ruta)}" alt="${nom}" loading="lazy" onclick="mostrarGrande('/ver_foto?archivo=${encodeURIComponent(ruta)}')"></div>`;
-            }
-            html += `</div>`;
-            document.getElementById('contenidoDetalle').innerHTML=html;
-            document.getElementById('modalVer').classList.add('mostrar');
-            document.getElementById('btnAprobarModal').onclick=()=>{cambiarEstado(indice,'APROBADA ✅');cerrarModalVer();};
-            document.getElementById('btnObservarModal').onclick=()=>{cambiarEstado(indice,'OBSERVADA ⚠️');cerrarModalVer();};
-            document.getElementById('btnDescargarPDF').onclick=()=>descargarPDF(indice);
-        }
-
-        function descargarPDF(indice){
-            window.open('/descargar_pdf?indice='+indice,'_blank');
-        }
-
-        function mostrarGrande(url){ document.getElementById('fotoAmpliada').src=url; document.getElementById('visorGrande').classList.add('mostrar'); }
-        function cerrarImagenGrande(){ document.getElementById('visorGrande').classList.remove('mostrar'); }
-        function cerrarModalVer(){ document.getElementById('modalVer').classList.remove('mostrar'); indiceActual=null; }
-        async function cambiarEstado(i,estado){
-            await fetch('/cambiar_estado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({indice:i,estado:estado})});
-            cargarLista();
-        }
-        cargarLista();
-        setInterval(cargarLista,30000);
-    </script>
-</body>
-</html>
-"""
-
-# ======================
+                    <p style="font-size:16px; font-weight:bold; margin-top:10px; color:#d68910;">📌 Estado
+                    # ======================
 # 🛣️ RUTAS DEL SERVIDOR
 # ======================
-
 @app.route('/ver_foto')
 def ver_foto():
     archivo = request.args.get('archivo', '')
@@ -668,8 +676,82 @@ def guardar_solicitud():
     d = request.get_json()
     fecha = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     numero = datetime.now().strftime("%Y%m%d%H%M%S%f")[:18]
-    registro = f"""
-============================================
-FECHA: {fecha}
-ESTUDIANTE: {d['est_nombre']}
-F.NACIMIENTO: {d
+    documentos_texto = str(d['archivos'])
+    registro = {
+        "NÚMERO REGISTRO": numero,
+        "FECHA": fecha,
+        "ESTADO": "PENDIENTE ⏳",
+        "ESTUDIANTE": d['est_nombre'],
+        "F.NACIMIENTO": d['est_fnac'],
+        "DIRECCIÓN": d['est_dir'],
+        "PROCEDENCIA": d['est_proc'],
+        "TUTOR": d['tut_nombre'],
+        "CI TUTOR": d['tut_ci'],
+        "TELÉFONO": d['tut_tel'],
+        "CORREO": d['tut_correo'],
+        "DOCUMENTOS": documentos_texto
+    }
+    lista = leer_solicitudes()
+    lista.append(registro)
+    guardar_solicitudes(lista)
+    return jsonify({"ok": True, "numero": numero})
+
+@app.route('/lista_solicitudes')
+def lista_solicitudes():
+    return jsonify({"lista": leer_solicitudes()})
+
+@app.route('/ver_solicitud')
+def ver_solicitud():
+    idx = int(request.args.get('indice', 0))
+    lista = leer_solicitudes()
+    if not (0 <= idx < len(lista)):
+        return jsonify({"ok": False})
+    sol = lista[idx]
+    sol['documentos_parseados'] = parsear_documentos(sol.get('DOCUMENTOS', '{}'))
+    return jsonify({"ok": True, "solicitud": sol})
+
+@app.route('/cambiar_estado', methods=['POST'])
+def cambiar_estado():
+    datos = request.get_json()
+    lista = leer_solicitudes()
+    idx = int(datos['indice'])
+    if 0 <= idx < len(lista):
+        lista[idx]['ESTADO'] = datos['estado']
+        guardar_solicitudes(lista)
+    return jsonify({"ok": True})
+
+@app.route('/eliminar_solicitud', methods=['POST'])
+def eliminar_solicitud():
+    datos = request.get_json()
+    lista = leer_solicitudes()
+    idx = int(datos['indice'])
+    if 0 <= idx < len(lista):
+        lista.pop(idx)
+        guardar_solicitudes(lista)
+    return jsonify({"ok": True})
+
+@app.route('/consultar_registro')
+def consultar_registro():
+    numero = request.args.get('numero', '').strip()
+    lista = leer_solicitudes()
+    for sol in lista:
+        if sol.get('NÚMERO REGISTRO') == numero:
+            return jsonify({"encontrado": True, "estado": sol.get('ESTADO', 'PENDIENTE')})
+    return jsonify({"encontrado": False})
+
+@app.route('/lista_publica')
+def lista_publica():
+    lista = leer_solicitudes()
+    aprobadas = []
+    observadas = []
+    for sol in lista:
+        nombre = f"{sol.get('ESTUDIANTE', '---')} — {sol.get('NÚMERO REGISTRO', '---')}"
+        estado = sol.get('ESTADO', '')
+        if 'APROBADA' in estado:
+            aprobadas.append(nombre)
+        elif 'OBSERVADA' in estado:
+            observadas.append(nombre)
+    return jsonify({"aprobadas": aprobadas, "observadas": observadas})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=False)
