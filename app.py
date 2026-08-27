@@ -62,7 +62,8 @@ def convertir_a_documento_digital(ruta_entrada, ruta_salida):
         mejorada = mejorada.filter(ImageFilter.SHARPEN)
         mejorada.save(ruta_salida, quality=95)
         return True
-    except:
+    except Exception as e:
+        print(f"Error en conversión: {e}")
         return False
 
 # ======================
@@ -76,7 +77,8 @@ def leer_solicitudes():
     with open(ruta, "r", encoding="utf-8") as f:
         bloques = f.read().strip().split("============================================")
         for idx, b in enumerate(bloques):
-            if not b.strip(): continue
+            if not b.strip():
+                continue
             datos = {"indice": idx}
             for linea in b.strip().split("\n"):
                 if ":" in linea:
@@ -398,8 +400,6 @@ FORMULARIO_HTML = """
         <button class="boton-enviar" onclick="enviarFormulario()">📤 Enviar Solicitud de Inscripción</button>
         <div id="msg" class="mensaje"></div>
     </div>
-
-    <!-- MODAL SEGUIMIENTO -->
     <div id="modalSeguimiento" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:100;">
         <div style="background:white; padding:30px; border-radius:14px; width:90%; max-width:450px;">
             <h2>🔍 Seguimiento de Solicitud</h2>
@@ -410,7 +410,6 @@ FORMULARIO_HTML = """
             <div id="resultadoSeg" style="margin-top:15px; padding:15px; border-radius:8px; display:none;"></div>
         </div>
     </div>
-
     <script>
         const docs = [
             "📕 Libreta de Calificaciones",
@@ -514,7 +513,6 @@ SECRETARIA_HTML = """
         .btn-observar { background:#f39c12; color:white; }
         .btn-pdf { background:#9B59B6; color:white; }
         .btn-eliminar { background:#e74c3c; color:white; }
-        .btn-descargar { background:#16a085; color:white; }
         .boton-volver { display:inline-block; padding:10px 20px; background:#95a5a6; color:white; text-decoration:none; border-radius:8px; margin-bottom:15px; }
         .aviso { background:#eafaf1; color:#1e8449; padding:12px; border-radius:8px; margin-bottom:15px; }
         .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); align-items:flex-start; justify-content:center; z-index:200; padding:20px; overflow-y:auto; }
@@ -530,48 +528,28 @@ SECRETARIA_HTML = """
         .tarjeta-foto { border:2px solid #e0e0e0; border-radius:12px; padding:12px; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
         .tarjeta-foto h5 { font-size:14px; color:#2C3E50; margin-bottom:10px; text-align:center; }
         .tarjeta-foto img { width:100%; height:auto; border-radius:8px; cursor:pointer; }
-        .imagen-grande { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:300; align-items:center; justify-content:center; }
-        .imagen-grande.mostrar { display:flex; }
-        .imagen-grande img { max-width:90%; max-height:90%; border-radius:8px; }
-        .cerrar-grande { position:absolute; top:20px; right:30px; color:white; font-size:35px; cursor:pointer; }
+        .sin-foto { padding:30px; text-align:center; color:#888; background:#f9f9f9; border-radius:8px; border:2px dashed #ccc; }
         .acciones { margin-top:20px; padding-top:15px; border-top:1px solid #ddd; text-align:center; }
         .acciones .btn { padding:10px 20px; font-size:15px; margin:5px; }
-        .sin-foto { padding:30px; text-align:center; color:#888; background:#f9f9f9; border-radius:8px; border:2px dashed #ccc; }
     </style>
 </head>
 <body>
     <div class="caja">
         <a href="/" class="boton-volver">← Volver al Inicio</a>
         <h1>📂 SOLICITUDES RECIBIDAS</h1>
-        <div class="aviso">🔄 Ver formulario completo + fotos • 📄 Descargar PDF • 📷 Descargar fotos • ✅ Aprobar • ⚠️ Observar • ❌ Eliminar</div>
+        <div class="aviso">🔄 Ver formulario completo + fotos • 📄 Descargar PDF • ✅ Aprobar • ⚠️ Observar • ❌ Eliminar</div>
         <table>
             <thead><tr><th>Fecha</th><th>Estudiante</th><th>Tutor / CI</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="tabla"></tbody>
         </table>
     </div>
-
-    <!-- MODAL VER DETALLE -->
     <div id="modalVer" class="modal">
         <div class="modal-contenido">
             <span class="cerrar-modal" onclick="cerrarModalVer()">&times;</span>
             <h2>👁️ DETALLE COMPLETO DE LA SOLICITUD</h2>
             <div id="contenidoDetalle"></div>
-            <div class="acciones">
-                <button class="btn btn-pdf" id="btnDescargarPDF">📄 Descargar Formulario Completo (PDF)</button>
-                <button class="btn btn-aprobar" id="btnAprobarModal">✅ Aprobar Solicitud</button>
-                <button class="btn btn-observar" id="btnObservarModal">⚠️ Marcar como Observada</button>
-                <button class="btn btn-eliminar" id="btnEliminarModal">❌ Eliminar Solicitud</button>
-                <button class="btn" style="background:#ccc; color:#333;" onclick="cerrarModalVer()">Cerrar</button>
-            </div>
         </div>
     </div>
-
-    <!-- VISOR IMAGEN AMPLIADA -->
-    <div id="visorGrande" class="imagen-grande" onclick="cerrarImagenGrande()">
-        <span class="cerrar-grande">&times;</span>
-        <img id="fotoAmpliada" src="">
-    </div>
-
     <script>
         let indiceActual = null;
         const nombresDocs = [
@@ -585,7 +563,6 @@ SECRETARIA_HTML = """
             "💧 Factura de Agua",
             "🗺️ Croquis de Ubicación"
         ];
-
         async function cargarLista() {
             const r=await fetch('/lista_solicitudes');
             const d=await r.json();
@@ -599,27 +576,64 @@ SECRETARIA_HTML = """
                 tb.innerHTML += `<tr class="fila"><td>${sol.FECHA||'---'}</td><td>${est}</td><td>${tut}<br><small>CI: ${ci}</small></td><td class="${clase}">${estdo}</td><td><button class="btn btn-ver" onclick="verDetalle(${i})">👁️ Ver</button> <button class="btn btn-pdf" onclick="descargarPDF(${i})">📄 PDF</button> <button class="btn btn-aprobar" onclick="cambiarEstado(${i},'APROBADA ✅')">Aprobar</button> <button class="btn btn-observar" onclick="cambiarEstado(${i},'OBSERVADA ⚠️')">Observar</button> <button class="btn btn-eliminar" onclick="eliminarSolicitud(${i})">❌</button></td></tr>`;
             });
         }
-
         async function verDetalle(indice){
             indiceActual=indice;
             const r=await fetch('/ver_solicitud?indice='+indice);
             const d=await r.json(); if(!d.ok) return;
             const s=d.solicitud;
-            let html = `
-                <div class="bloque-datos">
-                    <p><strong>📅 Fecha:</strong> ${s.FECHA||'---'}</p>
-                    <p><strong>📌 N° Registro:</strong> ${s['NÚMERO REGISTRO']||'---'}</p>
-                    <p><strong>👤 Estudiante:</strong> ${s.ESTUDIANTE||'---'}</p>
-                    <p><strong>🎂 F. Nacimiento:</strong> ${s['F.NACIMIENTO']||'---'}</p>
-                    <p><strong>🏠 Dirección:</strong> ${s.DIRECCIÓN||'---'}</p>
-                    <p><strong>🏫 Procedencia:</strong> ${s.PROCEDENCIA||'---'}</p>
-                    <hr style="margin:8px 0; border:none; border-top:1px solid #ddd;">
-                    <p><strong>👨‍👩‍👦 Tutor:</strong> ${s.TUTOR||'---'}</p>
-                    <p><strong>🪪 CI Tutor:</strong> ${s['CI TUTOR']||'---'}</p>
-                    <p><strong>📞 Teléfono:</strong> ${s.TELÉFONO||'---'}</p>
-                    <p><strong>📧 Correo:</strong> ${s.CORREO||'---'}</p>
-                    <p style="font-size:16px; font-weight:bold; margin-top:10px; color:#d68910;">📌 Estado
-                    # ======================
+            let html = `<div class="bloque-datos">
+                <p><strong>📅 Fecha:</strong> ${s.FECHA||'---'}</p>
+                <p><strong>📌 N° Registro:</strong> ${s['NÚMERO REGISTRO']||'---'}</p>
+                <p><strong>👤 Estudiante:</strong> ${s.ESTUDIANTE||'---'}</p>
+                <p><strong>🎂 F. Nacimiento:</strong> ${s['F.NACIMIENTO']||'---'}</p>
+                <p><strong>🏠 Dirección:</strong> ${s.DIRECCIÓN||'---'}</p>
+                <p><strong>🏫 Procedencia:</strong> ${s.PROCEDENCIA||'---'}</p>
+                <hr style="margin:8px 0; border:none; border-top:1px solid #ddd;">
+                <p><strong>👨‍👩‍👦 Tutor:</strong> ${s.TUTOR||'---'}</p>
+                <p><strong>🪪 CI Tutor:</strong> ${s['CI TUTOR']||'---'}</p>
+                <p><strong>📞 Teléfono:</strong> ${s.TELÉFONO||'---'}</p>
+                <p><strong>📧 Correo:</strong> ${s.CORREO||'---'}</p>
+                <p style="font-size:16px; font-weight:bold; margin-top:10px; color:#d68910;">📌 Estado: ${s.ESTADO||'PENDIENTE ⏳'}</p>
+            </div>`;
+            html += `<h3 class="titulo-fotos">📷 DOCUMENTOS ADJUNTOS</h3><div class="galeria">`;
+            const docs=s.documentos_parseados||{};
+            if(Object.keys(docs).length===0){
+                html += `<div class="sin-foto">No se adjuntaron documentos</div>`;
+            } else {
+                for(const k of Object.keys(docs).sort()){
+                    const nom = nombresDocs[parseInt(k)]||`Documento ${k}`;
+                    html += `<div class="tarjeta-foto"><h5>${nom}</h5><img src="/ver_foto?archivo=${encodeURIComponent(docs[k])}" alt="Documento"></div>`;
+                }
+            }
+            html += `</div><div class="acciones">
+                <button class="btn btn-pdf" onclick="descargarPDF(${indice})">📄 Descargar PDF</button>
+                <button class="btn btn-aprobar" onclick="cambiarEstado(${indice},'APROBADA ✅'); cerrarModalVer();">✅ Aprobar</button>
+                <button class="btn btn-observar" onclick="cambiarEstado(${indice},'OBSERVADA ⚠️'); cerrarModalVer();">⚠️ Observar</button>
+                <button class="btn btn-eliminar" onclick="if(confirm('¿Eliminar?')){ eliminarSolicitud(${indice}); cerrarModalVer(); }">❌ Eliminar</button>
+                <button class="btn" style="background:#ccc; color:#333;" onclick="cerrarModalVer()">Cerrar</button>
+            </div>`;
+            document.getElementById('contenidoDetalle').innerHTML=html;
+            document.getElementById('modalVer').classList.add('mostrar');
+        }
+        function cerrarModalVer(){ document.getElementById('modalVer').classList.remove('mostrar'); }
+        async function descargarPDF(i){ window.open(`/descargar_pdf?indice=${i}`, '_blank'); }
+        async function cambiarEstado(i,estado){
+            await fetch('/cambiar_estado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({indice:i,estado:estado})});
+            cargarLista();
+        }
+        async function eliminarSolicitud(i){
+            if(confirm('¿Seguro que quieres eliminar esta solicitud?')){
+                            await fetch('/eliminar_solicitud',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({indice:i})});
+                cargarLista();
+            }
+        }
+        window.onload = cargarLista;
+    </script>
+</body>
+</html>
+"""
+
+# ======================
 # 🛣️ RUTAS DEL SERVIDOR
 # ======================
 @app.route('/ver_foto')
@@ -667,8 +681,10 @@ def subir_documento():
     archivo.save(ruta_temporal)
     ruta_destino = os.path.join(CARPETA_DOCUMENTOS, f"doc_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{indice}.jpg")
     ok = convertir_a_documento_digital(ruta_temporal, ruta_destino)
-    try: os.remove(ruta_temporal)
-    except: pass
+    try:
+        os.remove(ruta_temporal)
+    except:
+        pass
     return jsonify({"ok": ok, "ruta": ruta_destino})
 
 @app.route('/guardar_solicitud', methods=['POST'])
