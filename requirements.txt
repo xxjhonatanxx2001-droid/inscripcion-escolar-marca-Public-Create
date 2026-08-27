@@ -1,5 +1,5 @@
-flask
-gunicorn
-pillow
-opencv-python-headless
+Flask
+Pillow
+opencv-python
 numpy
+reportlab
